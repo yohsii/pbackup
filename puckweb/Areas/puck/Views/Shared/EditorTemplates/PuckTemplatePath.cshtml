@@ -1,0 +1,73 @@
+﻿@using System.IO
+@using Microsoft.Extensions.Caching.Memory;
+@using Microsoft.Extensions.Hosting;
+@inject I_Api_Helper apiHelper;
+@inject IMemoryCache cache;
+@inject Microsoft.Extensions.Hosting.IHostEnvironment env;
+@model String
+@{
+    var hasAllowedViews = false;
+    var views = new List<FileInfo>();
+    string typeString = ViewContext.HttpContext.Request.Query["type"];
+    if (string.IsNullOrEmpty(typeString))
+    {
+        typeString = ViewContext.HttpContext.Request.Query["p_type"];
+    }
+    if (string.IsNullOrEmpty(typeString))
+    {
+        if (ViewBag.Level0Type != null)
+        {
+            typeString = ViewBag.Level0Type.Name;
+        }
+    }
+    if (!string.IsNullOrEmpty(typeString))
+    {
+        string cacheKey = "allowedViews_" + typeString;
+        views = cache.Get<List<FileInfo>>(cacheKey);
+        if (views == null)
+        {
+            views = apiHelper.AllowedViews(typeString, new string[] { "~/views/shared/", "~/views/_ViewStart.cshtml" });
+            cache.Set(cacheKey, views, TimeSpan.FromMinutes(30));
+        }
+        if (views.Count == 0)
+        {
+            views = cache.Get<List<FileInfo>>("puckviews");
+            if (views == null)
+            {
+                views = apiHelper.Views(new string[] { "~/views/shared/", "~/views/_ViewStart.cshtml" });
+                if (views.Count > 0 && !env.IsDevelopment())
+                {
+                    cache.Set("puckviews", views, TimeSpan.FromMinutes(30));
+                }
+            }
+        }
+        else
+        {
+            hasAllowedViews = true;
+        }
+    }
+    else
+    {
+        views = cache.Get<List<FileInfo>>("puckviews");
+        if (views == null)
+        {
+            views = apiHelper.Views(new string[] { "~/views/shared/", "~/views/_ViewStart.cshtml" });
+            if (views.Count > 0 && !env.IsDevelopment())
+            {
+                cache.Set("puckviews", views, TimeSpan.FromMinutes(30));
+            }
+        }
+    }
+    if (!hasAllowedViews) {
+        views = views.OrderBy(x => x.Name).ToList();
+    }
+    var selectListItems = new List<SelectListItem>();
+    var c = 0;
+    @foreach (var f in views)
+    {
+        var selected = (string.IsNullOrEmpty(Model) && hasAllowedViews && c == 0) || (!string.IsNullOrEmpty(Model) && Model.ToLower().Equals(ApiHelper.ToVirtualPath(f.FullName).ToLower()));
+        selectListItems.Add(new SelectListItem(f.Name,@ApiHelper.ToVirtualPath(f.FullName),selected));
+        c++;
+    }
+    @Html.DropDownListFor(x => x,selectListItems,"- Select a Template -",new {id="" })
+}

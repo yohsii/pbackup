@@ -1,0 +1,33 @@
+﻿@model Boolean?
+
+@if(ViewData.ModelMetadata.HideSurroundingHtml){
+    <input type="hidden" name="@ViewData.TemplateInfo.HtmlFieldPrefix" value="@(Model.HasValue?Model.Value.ToString():"")" />
+}
+else if (ViewData.ModelMetadata.IsReadOnly)
+{
+    <input type="text" readonly name="@ViewData.TemplateInfo.HtmlFieldPrefix" value="@(Model.HasValue?Model.Value.ToString():"")" />
+}
+else
+{
+    var guid = Guid.NewGuid();
+    <input data-guid="@guid.ToString()" type="checkbox" name="@ViewData.TemplateInfo.HtmlFieldPrefix" @(Model.HasValue && Model.Value?"checked":"") value="True"/>
+    
+    @*<script>
+        onAfterDom(function () {
+            var guid = "@Html.Raw(guid.ToString())";
+            $("input[data-guid='" + guid + "']").change(function () {
+                var el = $(this);
+                if (el.is(":checked")) {
+                    el.val("true");
+                } else {
+                    el.val("false");
+                }
+            });
+        });
+    </script>*@
+
+    @*<select name="@ViewData.ModelMetadata.PropertyName">
+        <option @(Model.HasValue && Model.Value?"selected":"") value="true">Yes</option>
+        <option @(!Model.HasValue||(Model.HasValue && !Model.Value)?"selected":"") value="false">No</option>
+    </select>*@    
+}

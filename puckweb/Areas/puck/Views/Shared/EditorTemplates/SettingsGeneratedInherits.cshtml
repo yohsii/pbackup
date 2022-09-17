@@ -1,0 +1,13 @@
+﻿@inject I_Api_Helper apiHelper;
+@model string
+@{
+    
+}
+<select name="@ViewData.ModelMetadata.PropertyName">
+    <option value="">None</option>
+    @foreach (var modelType in apiHelper.GeneratedModelTypes())
+    {
+        <option value="@modelType.AssemblyQualifiedName">@modelType.Name</option>
+    }
+
+</select>

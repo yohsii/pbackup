@@ -1,0 +1,66 @@
+﻿@model puck.core.Models.Admin.LogIn
+
+@{
+    
+}
+@if (ViewBag.redirect == true) { 
+    <script type="text/javascript">
+        location = "/puck/";
+    </script>
+}else{
+<h2></h2>
+<div class="container_12 login container">
+    <div class="row">
+        <div class="grid_12 col-md-12">
+            <h1 class="master">Puck</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="pt-3 col-md-4 grid_4 push_5">
+            @using (Html.BeginForm(new { returnUrl = ViewContext.HttpContext.Request.Query["returnUrl"].ToString() }))
+            {
+            <div class="fields">
+                <div data-fieldname="Username" class="fieldwrapper  root">
+                    <div class="editor-label " style="">
+                        @Html.LabelFor(x=>x.Username)
+                        @Html.ValidationMessageFor(x=>x.Username)
+                    </div>
+                    <div tabindex="-1" class="editor-field ">
+                        @Html.TextBoxFor(x=>x.Username)
+                    </div>
+                    <div class="clearboth"></div>
+                </div>
+                <div data-fieldname="Password" class="fieldwrapper  root">
+                    <div class="editor-label " style="">
+                        @Html.LabelFor(x => x.Password)
+                        @Html.ValidationMessageFor(x => x.Password)
+                    </div>
+                    <div tabindex="-1" class="editor-field ">
+                        @Html.TextBoxFor(x => x.Password,new { type="password"})
+                    </div>
+                    <div class="clearboth"></div>
+                    <a href="/puck/admin/forgotpassword">Forgotten password?</a>
+                </div>
+                <div data-fieldname="PersistentCookie" class="fieldwrapper  root">
+                    <div class="editor-label " style="">
+                        @Html.LabelFor(x=>x.PersistentCookie)
+                        @Html.ValidationMessageFor(x=>x.PersistentCookie)
+                    </div>
+                    <div tabindex="-1" class="editor-field ">
+                        @Html.CheckBoxFor(x=>x.PersistentCookie)
+                    </div>
+                    <div class="clearboth"></div>
+                </div>
+
+            </div>
+    
+            <button class="btn btn-link">submit</button>
+                
+            }
+            <div class="error">
+                @ViewBag.Error
+            </div>
+        </div>
+    </div>
+</div>
+}

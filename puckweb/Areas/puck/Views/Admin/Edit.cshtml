@@ -1,0 +1,127 @@
+﻿@model puck.core.Models.Admin.PuckUserViewModel
+@{
+    Layout = null;
+    var guid = Guid.NewGuid();
+}
+<div class="user_edit settings" data-guid="@guid">
+    @using (Html.BeginForm("edit", "admin", new { edit = (!string.IsNullOrEmpty(Model.UserName)).ToString() }, FormMethod.Post,null,new {autocomplete="off" }))
+    {
+        @Html.ValidationSummary(true)
+
+    <fieldset>
+        <legend>Puck User</legend>
+
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.UserName)
+            @Html.TextBoxFor(x => x.UserName)
+        </div>
+
+        @Html.HiddenFor(x => x.CurrentEmail)
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.Email)
+            @Html.TextBoxFor(x => x.Email)
+        </div>
+
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.FirstName)
+            @Html.TextBoxFor(x => x.FirstName)
+        </div>
+
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.Surname)
+            @Html.TextBoxFor(x => x.Surname)
+        </div>
+
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.StartNodes)
+            @Html.EditorFor(x => x.StartNodes)
+        </div>
+
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.UserGroups)
+            @Html.EditorFor(x => x.UserGroups)
+        </div>
+
+        <div class="fieldwrapper permissions">
+            @Html.LabelFor(x => x.Roles)
+            <span class="description">Hold down Ctrl (on windows) or Command (on mac), to select multiple permissions. Alternatively, click and drag if the permissions you want are listed one after the other.</span>
+            <br />
+            @Html.EditorFor(x => x.Roles)
+        </div>
+
+        <div class="fieldwrapper">
+            @Html.LabelFor(x => x.UserVariant)
+            @Html.EditorFor(x => x.UserVariant)
+        </div>
+        @if (string.IsNullOrEmpty(Model.UserName))
+        {
+            <div class="fieldwrapper">
+                @Html.LabelFor(x => x.Password)
+                @Html.TextBoxFor(x => x.Password, new { type = "password", autocomplete = "new-password" })
+            </div>
+
+            <div class="fieldwrapper">
+                @Html.LabelFor(x => x.PasswordConfirm)
+                @Html.EditorFor(x => x.PasswordConfirm)
+            </div>
+        }
+        else
+        {
+            <div class="fieldwrapper">
+                @Html.LabelFor(x => x.Password, "New Password")
+                @Html.TextBoxFor(x => x.Password, new { type = "password", autocomplete = "new-password" })
+            </div>
+
+            <div class="fieldwrapper">
+                @Html.LabelFor(x => x.PasswordConfirm, "Confirm New Password")
+                @Html.EditorFor(x => x.PasswordConfirm)
+            </div>
+
+        }
+    </fieldset>
+        <div>
+            <button class="btn btn-link update">update</button>
+        </div>
+    }    
+    <div class="msg">
+
+    </div>
+</div>
+<script>
+    (function () {
+        var guid = "@guid.ToString()";
+        var container = $("[data-guid='" + guid + "']");
+        var userGroupsList = container.find(".user-groups-list");
+        userGroupsList.on("click", "li", function (e) {
+            var el = $(this);
+            var permissions = el.attr("data-permissions").split(",");
+            var select = container.find(".permissions select");
+            if (!el.hasClass("active")) {
+                //el.removeClass("active");
+                var remainingPermissions = [];
+                userGroupsList.find("li.active").each(function (i) {
+                    var remEl = $(this);
+                    var permissions = remEl.attr("data-permissions").split(",");
+                    for (var i = 0; i < permissions.length; i++) {
+                        remainingPermissions[permissions[i]] = true;
+                    }
+                });
+                var permsToRemove = [];
+                for (var i = 0; i < permissions.length; i++) {
+                    if (!remainingPermissions[permissions[i]]) {
+                        permsToRemove.push(permissions[i]);
+                    }
+                }
+                for (var i = 0; i < permsToRemove.length; i++) {
+                    select.find("option[value='" + permsToRemove[i] + "']").removeAttr("selected");
+                }
+            } else {
+                //el.addClass("active");
+                for (var i = 0; i < permissions.length; i++) {
+                    select.find("option[value='" + permissions[i] + "']").prop("selected",true);
+                }
+            }
+
+        });
+    })();
+</script>

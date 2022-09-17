@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <PackageId>PuckCMS_AzureDirectory</PackageId>
+    <Company>azure-contrib</Company>
+    <Description>https://github.com/azure-contrib/AzureDirectory/</Description>
+    <Copyright>https://github.com/azure-contrib/AzureDirectory/blob/master/License.txt</Copyright>
+    <PackageLicenseExpression>MS-PL</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/azure-contrib/AzureDirectory/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/azure-contrib/AzureDirectory/</RepositoryUrl>
+    <PackageTags>Azure, Lucene</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
+    <PackageReference Include="Lucene.Net" Version="4.8.0-beta00008" />
+    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.2.3" />
+  </ItemGroup>
+
+</Project>

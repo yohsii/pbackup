@@ -1,0 +1,35 @@
+﻿@inject I_Api_Helper apiHelper;
+@{
+    Layout = null;
+    
+    var types = apiHelper.TaskTypes();
+
+}
+<div class="create_dialog">
+    <div class="">
+        @if (types.Count == 0)
+        {
+            <div>
+                looks like there are no tasks to pick from
+            </div>
+        }
+        else
+        {
+            <div class="typecontainer">
+                <label>Task Type</label>
+
+                <select name="type">
+                    @foreach (var t in types)
+                    {
+                        <option value="@t.FullName">@t.Name</option>
+                    }
+                </select>
+
+
+            </div>
+            <div>
+                <button class='btn btn-link'>Create</button>
+            </div>
+        }
+    </div>
+</div>

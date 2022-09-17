@@ -1,0 +1,359 @@
+﻿@using puck.core.Abstract.EditorSettings
+@using puck.core.Models.EditorSettings
+@using puck.core.Models.EditorSettings.Attributes
+@model List<puck.core.Models.PuckReference>
+@{
+
+    I_Content_Picker_Settings settings = this.PuckEditorSettings<ContentPickerEditorSettingsAttribute>();
+    if (settings == null)
+    {
+        settings = this.PuckEditorSettings<ContentPickerEditorSettings>()
+        ?? new puck.core.Models.EditorSettings.ContentPickerEditorSettings()
+        {
+            /*AllowDuplicates = false,*/
+            AllowUnpublished = true,
+            MaxPick = 5,
+            /*SelectionType = "both",*/
+            StartPaths = null,
+            AllowedTypes="",
+            Types = new Type[] { }
+        };
+    }
+    var startPath = "";
+    List<string> startIds = new List<string>();
+    string allowedTypes = "";
+
+    if (settings.Types != null && settings.Types.Any()) {
+        allowedTypes = string.Join(",", settings.Types.Select(x => x.Name));
+    } else if (!string.IsNullOrEmpty(settings.AllowedTypes)) {
+        allowedTypes = settings.AllowedTypes;
+    }
+
+    if (settings.StartPathIds!=null && settings.StartPathIds.Any()) {
+        foreach (var startIdStr in settings.StartPathIds)
+        {
+            Guid startId;
+            if (Guid.TryParse(startIdStr, out startId)) {
+                startIds.Add(startId.ToString());
+            }
+        }
+    }
+    else if (settings.StartPaths != null && settings.StartPaths.Count > 0)
+    {
+        startIds.AddRange(settings.StartPaths.Select(x=>x.Id.ToString()));
+    }
+    var guid = Guid.NewGuid();
+    var validationDummyGuid = Guid.NewGuid();
+}
+    <div data-guid="@guid.ToString()" class="editor_container puckpicker puckpicker_@ViewData.ModelMetadata.PropertyName puckpicker_@ViewData.TemplateInfo.HtmlFieldPrefix.Replace("[","_").Replace("]","_").Replace(".","_")">
+        <div style="display:none;" class="propName" data-propName="@ViewData.TemplateInfo.HtmlFieldPrefix"></div>
+        <div style="display:none;" class="containerTrigger"></div>
+        @if (ViewData.ModelMetadata.IsRequired)
+        {
+        <span class="field-validation-valid validationDummySummary" data-valmsg-for="v@(validationDummyGuid.ToString().Replace("-",""))" data-valmsg-replace="true"></span>
+        <input class="validationDummy" type="hidden" data-val="true" data-val-required="The @ViewData.TemplateInfo.HtmlFieldPrefix field is required." id="@validationDummyGuid.ToString()" name="v@(validationDummyGuid.ToString().Replace("-",""))" />
+        }
+        <div>
+            <button type="button" class="btn btn-light addItem"><i class="fas fa-plus"></i></button>
+        </div>
+        <ul class="nodisplay contentTree nomenu">
+            <li class="node" data-id="00000000-0000-0000-0000-000000000000" data-path="/" data-children_path="/"></li>
+        </ul>
+        <div class="selected_content">
+            @if (Model != null)
+            {
+                foreach (var m in Model)
+                {
+                    if (!string.IsNullOrEmpty(m.Variant))
+                    {
+                        <div class="selected_node" data-nodename="" data-variant="@m.Variant" data-id="@m.Id">
+                            <i class="fas fa-sort puckPickerSortHandle mr-3"></i><span class="nname"></span> - <span class="v">@m.Variant</span>
+                            <a href="#content?id=@(m.Id)&variant=@(m.Variant)" class="view">View</a>
+                            &nbsp;<i class='fas fa-minus-circle removeItem'></i>
+                        </div>
+
+                    }
+                    else
+                    {
+                        <div class="selected_node" data-variant="null" data-id="@m.Id">
+                            <i class="fas fa-sort puckPickerSortHandle mr-3"></i>
+                            <span class="nname"></span>&nbsp;
+                            <i class='fas fa-minus-circle removeItem'></i>
+                        </div>
+
+                    }
+                }
+            }
+        </div>
+    </div>
+<script type="text/javascript">
+    onAfterDom(function () {
+        var guid = "@guid.ToString()";
+        var modelType = "@Html.Raw(ViewBag.Level0Type.Name)";
+        var propname = "@Html.Raw(ViewData.TemplateInfo.HtmlFieldPrefix)";
+        var isPrePopulated = '@ViewBag.IsPrePopulated' == 'True';
+        var escapePropname = function (str) {
+            return str.replace(/\[/g, "_").replace(/\]/g,"_").replace(/\./g,"_");
+        }
+        
+        var container = $("[data-guid='"+guid+"']");
+        
+        var init = function (container) {
+            var validationDummy = container.find(".validationDummy");
+            validationDummyCounter++;
+            if (((validationDummy.attr("name")||"").match(/_/g) || []).length < 2)
+                validationDummy.attr("name", validationDummy.attr("name") + "_" + validationDummyCounter);
+            validationDummy.attr("data-val-required", "The " + container.parents(".fieldwrapper:first").find(".editor-label label").html() + " field is required.");
+            container.find(".validationDummySummary").attr("data-valmsg-for", validationDummy.attr("name"));
+
+            var getPropName = function () {
+                return container.find("div:hidden.propName:first").attr("data-propName");
+            }
+
+            container.on("puckListEditorUpdate", function (e, container) {
+                init(container);
+            });
+
+            container.find(".containerTrigger").unbind().click(function (e) {
+                container = $(this).parents(".editor_container:first");
+                selected_container = container.find(".selected_content");
+                //console.log("new container",container);
+            });
+            var allowedTypesCSV = "@Html.Raw(allowedTypes)";
+            var allowedTypes = [];
+            var tempAllowedTypes = allowedTypesCSV.split(",");
+            for (var i = 0; i < tempAllowedTypes.length; i++) {
+                var aType = tempAllowedTypes[i];
+                if (aType && aType.trim() && aType.trim() != ",")
+                    allowedTypes.push(aType.trim());
+            }
+            var selected_container = container.find(".selected_content");
+            var selected_content = function () { return selected_container.find(".selected_node"); }
+            var _startPath = "@startPath" == "" ? startPath : "@startPath";
+            var _startIdsStr = "@string.Join(",",startIds)";
+            var _startIds = _startIdsStr.split(",");
+            var _startPaths = [];
+            container.find("ul.content li:first").attr("data-children_path", _startPath);
+            var maxPick = "@settings.MaxPick";
+            var selectionType = "both"; @*"@settings.SelectionType";*@ //both|variant|node
+            var allowUnpublished = "@settings.AllowUnpublished";
+            var allowDuplicates = false;@*"@settings.AllowDuplicates"=='True';*@
+            var setValue = function () {
+                //console.log("container",container);
+                container.find("input:hidden:not(.validationDummy)").remove();
+                validationDummy.val("");
+                selected_container.find(".selected_node").each(function (i) {
+                    validationDummy.val("1");
+                    var node = $(this);
+                    container.append(
+                        "<input type='hidden' name='" + getPropName() + "[" + i + "].Id' value='" + node.attr("data-id") + "'/>"
+                        + "<input type='hidden' name='" + getPropName() + "[" + i + "].Variant' value='" + node.attr("data-variant") + "'/>"
+                    );
+                });
+            }
+            setValue();
+
+            if (selected_container.hasClass("ui-sortable") && selected_container.data("uiSortable")) {
+                try {
+                    selected_container.sortable("destroy");
+                } catch (error) {
+
+                }
+                selected_container.data("uiSortable", "");
+            }
+            selected_container.sortable({axis:"y", handle: ".puckPickerSortHandle", stop: function (event, ui) { setValue(); }});
+
+            var loadData = function () {
+                var ids = "";
+                selected_container.find(".selected_node").each(function () {
+                    ids += $(this).attr("data-id") + ",";
+                });
+                if (!ids)
+                    return;
+                getContentModels(ids, function (res) {
+                    for (var i = 0; i < res.length; i++) {
+                        var el = selected_container.find(".selected_node[data-id='" + res[i].Id + "']");
+                        el.attr("data-nodename", res[i].NodeName);
+                        el.find(".nname").html(res[i].NodeName);
+                        el.addClass("exists");
+                    }
+                    selected_container.find(".selected_node:not(.exists) .nname").html("- could not find this node, possibly deleted -");
+                });
+            }
+            loadData();
+            selected_container.off("click.remove").on("click.remove", "i.removeItem", function (e) {
+                var el = $(this).parent();
+                if (overlayEl) {
+                    overlayEl.find(".node[data-id='" + el.attr("data-id") + "']").removeClass("selected");
+                    overlayEl.find(".node[data-id='" + el.attr("data-id") + "'] .variants:first .variant[data-variant='"+el.attr("data-variant")+"']").removeClass("selected");
+                }
+                el.remove();
+                setValue();
+            });
+            var overlayEl = undefined;
+
+            getContentModels(_startIdsStr || emptyGuid, function (res) {
+                for (var i = 0; i < res.length; i++) {
+                    _startPaths.push(res[i].Path);
+                }
+                
+                container.find(".addItem").unbind().click(function (e) {
+                    if(overlayEl)
+                        overlayEl.remove();
+                    if (selected_container.find(".selected_node").length >= maxPick) {
+                        msg(undefined, "you cannot select any more, max selection is set to " + maxPick, undefined, undefined);
+                        return false;
+                    }
+                    var tree = container.find("ul.contentTree").clone().removeClass("nodisplay");
+                    overlayEl = overlay(tree, 400, undefined, undefined, "Content Picker", true);
+                    el = overlayEl.find(".node:first");
+                    var _startPathsCopy = _startPaths.length > 0 ? _startPaths.slice(0) : window.startPaths.slice(0);
+                    getDrawContent(emptyGuid, el, false, function () {
+                        if (overlayEl.find(".node").length == 1) {
+                            overlayEl.find("ul.contentTree").before($("<p/>").html("there is no content to select."));
+                        }
+                        var afterDrawContent = function () {
+                            selected_container.find(".selected_node").each(function () {
+                                var selected = $(this);
+                                overlayEl.find(".node[data-id='" + selected.attr("data-id") + "']").addClass("selected");
+                                overlayEl.find(".node[data-id='" + selected.attr("data-id") + "'] .variants:first .variant[data-variant='" + selected.attr("data-variant") + "']").addClass("selected");
+                            });
+
+                            el.find(".node").each(function () {
+                                var n = $(this);
+                                if (allowedTypes.length > 0 && !allowedTypes.includes(n.attr("data-type"))) {
+                                    n.addClass("disallowed");
+                                }
+                            });
+                        }
+                        afterDrawContent();
+                        loadTreePaths(_startPathsCopy, el.parents("ul:first"), afterDrawContent, false,false);
+                    }, false, _startPathsCopy);
+                    overlayEl.on("click", ".node span", function (e) {
+                        var clicked = $(this);
+                        var node = clicked.parents(".node:first");
+                        if (node.data("disabled")) {
+                            msg(undefined,"you are not authorized to select this node");
+                            return;
+                        }
+                        if (node.hasClass("disallowed")) {
+                            msg(undefined,"this selection is disallowed. type is \"" + node.attr("data-type") + "\" and allowed types are \""+allowedTypes.join(",")+"\"");
+                            return;
+                        }
+
+                        var isVariantSelection = clicked.hasClass("variant");
+
+                        if (node.attr("data-published") == "false" && !allowUnpublished) {
+                            return false;
+                        }
+                        var variant;
+                        if (!isVariantSelection) {
+                            //changed to only allow variant selection
+                            var variants = node.attr("data-variants").split(",");
+                            var path = node.attr("data-path");
+                            variants.sort(function (a, b) {
+                                var aOrder = getVariantOrder(a, path);
+                                var bOrder = getVariantOrder(b, path);
+                                return aOrder - bOrder;
+                            });
+                            //variant = node.find(".variant:first").attr("data-variant");
+                            variant = variants[0];
+                            isVariantSelection = true;
+                        }
+                        else
+                            variant = clicked.attr("data-variant");
+                        //check if node is already selected
+                        if (selected_container.find(".selected_node").filter("[data-id='" + node.attr("data-id") + "'][data-variant='" + variant + "']").length > 0 && !allowDuplicates) {
+                            //remove it from selected list
+                            selected_container.find(".selected_node").filter("[data-id='" + node.attr("data-id") + "'][data-variant='" + variant + "']").remove();
+                            if (selected_container.find(".selected_node").filter("[data-id='" + node.attr("data-id") + "']").length == 0)
+                                node.removeClass("selected");
+                            node.find(".variants:first .variant[data-variant='" + variant + "']").removeClass("selected");
+                            setValue();
+                            return;
+                        }
+
+                        if (selected_container.find(".selected_node").length >= maxPick) {
+                            msg(undefined, "you cannot select any more, max selection is set to " + maxPick, undefined, undefined);
+                            return false;
+                        }
+                        node.addClass("selected");
+                        node.find(".variants:first .variant[data-variant='" + variant + "']").addClass("selected");
+
+                        if (isVariantSelection && (selectionType == "variant" || selectionType == "both")) {
+                            selected_container.append(
+                                "<div class='selected_node' data-nodename='" + node.attr("data-nodename") + "' data-variant='" + variant + "' data-id='" + node.attr("data-id") + "'>"
+                                +"<i class=\"fas fa-sort puckPickerSortHandle mr-3\"></i>"
+                                + "<span>" + node.attr("data-nodename") + "</span> - <span class='v'>" + variant + "</span>"
+                                + "&nbsp;<a href='#content?id=" + node.attr("data-id") + "&variant=" + variant + "' class='view'>View</a> &nbsp;<i class='fas fa-minus-circle removeItem'></i></div>"
+                            );
+                        } else if (!isVariantSelection && (selectionType == "node" || selectionType == "both")) {
+                            selected_container.append(
+                                "<div class='selected_node' data-variant='' data-id='" + node.attr("data-id") + "'><i class=\"fas fa-sort puckPickerSortHandle mr-3\"></i><span>" + node.attr("data-nodename") + "</span>&nbsp;<i class='fas fa-minus-circle remove'></i></div>"
+                            );
+                        }
+                        setValue();
+                        //reinitialize sortable since refresh doesn't seem to work
+                        if (selected_container.hasClass("ui-sortable") && selected_container.data("uiSortable")) {
+                            selected_container.sortable("destroy");
+                            selected_container.data("uiSortable","");
+                            selected_container.sortable({axis:"y", handle: ".puckPickerSortHandle", stop: function (event, ui) { setValue(); }});
+                        }
+                    });
+                    overlayEl.on("click", "ul.contentTree li.node i.expand", function () {
+                        //get children content
+                        var node = $(this).parents(".node:first");
+                        var descendants = node.find("ul:first");
+                        if (descendants.length > 0) {//show
+                            if (descendants.first().is(":hidden")) {
+                                node.find("i.expand:first").removeClass("fa-chevron-right").addClass("fa-chevron-down");
+                                descendants.show();
+                            } else {//hide
+                                node.find("i.expand:first").removeClass("fa-chevron-down").addClass("fa-chevron-right");
+                                descendants.hide();
+                            }
+                        } else {
+                            var _startPathsCopy = _startPaths.length > 0 ? _startPaths.slice(0) : window.startPaths.slice(0);
+                            getDrawContent(node.attr("data-id"), node, false, function () {
+                                node.find(".loader").hide();
+                                node.find("i.expand:first").show();
+                                selected_container.find(".selected_node").each(function () {
+                                    var selected = $(this);
+                                    overlayEl.find(".node[data-id='" + selected.attr("data-id") + "']").addClass("selected");
+                                    overlayEl.find(".node[data-id='" + selected.attr("data-id") + "'] .variants:first .variant[data-variant='"+selected.attr("data-variant")+"']").addClass("selected");
+                                });
+                                node.find(".node").each(function () {
+                                    var n = $(this);
+                                    if (allowedTypes.length > 0 && !allowedTypes.includes(n.attr("data-type"))) {
+                                        n.addClass("disallowed");
+                                    }
+                                });
+                            }, false, _startPathsCopy);
+                            node.find(".loader").show();
+                            node.find("i.expand:first").removeClass("fa-chevron-right").addClass("fa-chevron-down").hide();
+                        }
+                    });
+                });
+            });
+
+            selected_container.off("click.view").on("click.view", ".selected_node .view", function (e) {
+                e.preventDefault();
+                var el = $(this);
+                var selectedNode = el.parent();
+                var id = selectedNode.attr("data-id");
+                var variant = selectedNode.attr("data-variant");
+                var nodename = selectedNode.attr("data-nodename");
+
+                var container = $("<div />");
+                var inner = $("<div data-tabPrefix='overlayContent_' class='cont_inner'></div>").css({ width: "100%", height: "100%" });
+                var msgContainer = $("<div class='msgTop'></div>");
+                container.append(msgContainer).append(inner);
+
+                var overlayEl = overlay(container, "90%", undefined, top, nodename);
+                displayMarkup(null, undefined, variant, undefined, id, inner, undefined);
+            });
+        }
+
+        init(container);
+    });
+</script>

@@ -1,0 +1,20 @@
+﻿@model List<string>
+@{
+    Layout = null;
+    var mod = Model ?? new List<string>();
+}
+
+@{
+    var fields = typeof(puck.core.Constants.PuckRoles).GetFields();
+
+    var options = new List<SelectListItem>();
+    @foreach (var f in fields.Where(x => x.IsLiteral))
+    {
+        var val = @f.GetValue(null).ToString();
+        var name = puck.core.Constants.PuckRoles.NamesDictionary[val.ToString()];
+        var selected = mod.Contains(val);
+        options.Add(new SelectListItem(name,val,selected));
+    }
+
+}
+@Html.ListBoxFor(x=>x,options)

@@ -1,0 +1,431 @@
+﻿@using puck.core.Abstract.EditorSettings
+@using puck.core.Models.EditorSettings
+@using puck.core.Models.EditorSettings.Attributes
+@model List<puck.core.Models.PuckReference>
+@{
+    I_Image_Picker_Settings settings = this.PuckEditorSettings<ImagePickerEditorSettingsAttribute>();
+    if (settings == null)
+    {
+        settings = this.PuckEditorSettings<ImagePickerEditorSettings>()
+          ?? new ImagePickerEditorSettings()
+          {
+              MaxPick = 3,
+              StartPath = null
+          };
+    }
+    var startPath = "";
+    Guid startId = Guid.Empty;
+    if (!string.IsNullOrEmpty(settings.StartPathId))
+    {
+        Guid.TryParse(settings.StartPathId, out startId);
+    }
+    else if (settings.StartPath != null && settings.StartPath.Count > 0)
+    {
+        startId = settings.StartPath.First().Id;
+    }
+    var guid = Guid.NewGuid();
+    var validationDummyGuid = Guid.NewGuid();
+}
+    <div data-guid="@guid.ToString()" class="editor_container puckimagepicker puckimagepicker_@ViewData.ModelMetadata.PropertyName puckimagepicker_@ViewData.TemplateInfo.HtmlFieldPrefix.Replace("[","_").Replace("]","_").Replace(".","_")">
+        <div style="display:none;" class="propName" data-propName="@ViewData.TemplateInfo.HtmlFieldPrefix"></div>
+        <div style="display:none;" class="containerTrigger"></div>
+
+        @if (ViewData.ModelMetadata.IsRequired)
+        {
+            <span class="field-validation-valid validationDummySummary" data-valmsg-for="v@(validationDummyGuid.ToString().Replace("-",""))" data-valmsg-replace="true"></span>
+            <input class="validationDummy" type="hidden" data-val="true" data-val-required="The @ViewData.TemplateInfo.HtmlFieldPrefix field is required." id="@validationDummyGuid.ToString()" name="v@(validationDummyGuid.ToString().Replace("-",""))" />
+        }
+
+        <div class="col-md-12 puckImagePickerMsgContainer"></div>
+        <div class="row mb-1">
+            <div class="col-md-2">
+                <button type="button" class="btn btn-light addImage"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="row selected_content">
+
+            @if (Model != null)
+            {
+                foreach (var m in Model)
+                {
+                    if (!string.IsNullOrEmpty(m.Variant))
+                    {
+                        <div data-id="@m.Id" data-variant="@m.Variant" data-nodename="" class="item col-md-4 col-lg-3">
+                            <div class="actionContainer">
+                                <i class="fas fa-pen view"></i>
+                                <i class="fas fa-trash remove"></i>
+                                <i class="fas fa-sort imagePickerSortHandle"></i>
+                            </div>
+                            <div class="imageContainer">
+                                <img src="" />
+                            </div>
+                            <div class="metaContainer">
+                                <span class="nodename"></span>
+                                - <span class="variant">@m.Variant</span>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        </div>
+        <div class="interfaces">
+            <div class="imagePickerOverlayContainer">
+                <div class="searchContainer">
+                    <input value="" type="text" class="searchBox" />
+                    <button type="button" class="btn btn-light">search</button>
+                </div>
+                <div class="path"></div>
+                <div class="itemContainer row w-100">
+
+                </div>
+            </div>
+
+            <div class="item col-4">
+                <div class="actionContainer">
+                    <i class="fas fa-pen view"></i>
+                    <i class="fas fa-trash remove"></i>
+                    <i class="fas fa-sort imagePickerSortHandle"></i>
+                </div>
+                <div class="iconContainer">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="imageContainer">
+                    <img src="" />
+                </div>
+                <div class="metaContainer">
+                    <span class="nodename"></span>
+                    <span class="separator">-</span> <span class="variant"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+<script type="text/javascript">
+    onAfterDom(function () {
+        var guid = "@guid.ToString()";
+        var propname = "@Html.Raw(ViewData.TemplateInfo.HtmlFieldPrefix)";
+        var escapePropname = function (str) {
+            return str.replace(/\[/g, "_").replace(/\]/g,"_").replace(/\./g,"_");
+        }
+        var container = $("[data-guid='"+guid+"']");
+        
+        var init = function (container) {
+            var validationDummy = container.find(".validationDummy");
+            validationDummyCounter++;
+            if (((validationDummy.attr("name")||"").match(/_/g) || []).length < 2)
+                validationDummy.attr("name", validationDummy.attr("name") + "_" + validationDummyCounter);
+            validationDummy.attr("data-val-required", "The " + container.parents(".fieldwrapper:first").find(".editor-label label").html() + " field is required.");
+            container.find(".validationDummySummary").attr("data-valmsg-for",validationDummy.attr("name"));
+
+            var getPropName = function () {
+                return container.find("div:hidden.propName:first").attr("data-propName");
+            }
+
+            container.on("puckListEditorUpdate", function (e, container) {
+                init(container);
+            });
+
+            container.find(".containerTrigger").unbind().click(function (e) {
+                container = $(this).parents(".editor_container:first");
+                msgContainer = container.find(".puckImagePickerMsgContainer");
+                selected_container = container.find(".selected_content");
+                //console.log("new container puckimagepicker",container);
+            });
+            var msgContainer = container.find(".puckImagePickerMsgContainer");
+            var selected_container = container.find(".selected_content");
+
+            var selected_content = function () { return selected_container.find(".item"); }
+            var _startPath = "@startPath" == "" ? startPath : "@startPath";
+            var _startId = "@startId.ToString()";
+            var maxPick = "@settings.MaxPick";
+            var setValue = function () {
+                //console.log("container",container);
+                container.find("input:hidden:not(.searchBox):not(.validationDummy)").remove();
+                validationDummy.val("");
+                selected_container.find(".item").each(function (i) {
+                    validationDummy.val("1");
+                    var node = $(this);
+                    container.append(
+                        "<input type='hidden' name='" + getPropName() + "[" + i + "].Id' value='" + node.attr("data-id") + "'/>"
+                        + "<input type='hidden' name='" + getPropName() + "[" + i + "].Variant' value='" + node.attr("data-variant") + "'/>"
+                    );
+                });
+            }
+            setValue();
+
+            if (selected_container.hasClass("ui-sortable") && selected_container.data("uiSortable")) {
+                try {
+                    selected_container.sortable("destroy");
+                } catch (error) {
+
+                }
+                selected_container.data("uiSortable", "");
+            }
+            selected_container.sortable({ handle: "i.imagePickerSortHandle", stop: function (event, ui) { setValue(); } });
+
+            var loadData = function () {
+                var ids = "";
+                selected_container.find(".item").each(function () {
+                    ids += $(this).attr("data-id") + ",";
+                });
+                if (!ids) return;
+                getContentModels(ids, function (res) {
+                    for (var i = 0; i < res.length; i++) {
+                        var el = selected_container.find(".item[data-id='" + res[i].Id + "']");
+                        el.attr("data-nodename", res[i].NodeName);
+                        el.find(".nodename").html(res[i].NodeName);
+                        el.find("img").attr("src", res[i].Image.Path);
+                    }
+                });
+            }
+            loadData();
+            var overlayEl = null;
+            container.find(".addImage").unbind().click(function (e) {
+                if(overlayEl)
+                    overlayEl.remove();
+                if (selected_container.find(".item").length >= maxPick) {
+                    msg(undefined, "you cannot select any more, max selection is set to " + maxPick, undefined, undefined);
+                    return false;
+                }
+                var el = container.find(".interfaces .imagePickerOverlayContainer").clone();
+                overlayEl = overlay(el, 400, undefined, undefined, "Image Picker", true);
+                showFolderContent(_startId, "/", function () {
+                    if (overlayEl.find(".item").length == 0) {
+                        overlayEl.find("div.path").after($("<p/>").css({ "margin-top": "20px" }).html("there is no content to select."));
+                    }
+                });
+                overlayEl.off("click.imgPickerMeta").on("click.imgPickerMeta", ".metaContainer.folder", function (e) {
+                    var el = $(this);
+                    var item = el.parents(".item");
+                    showFolderContent(item.attr("data-id"), item.attr("data-nodename"));
+                });
+                overlayEl.off("click.imgPickerPath").on("click.imgPickerPath", ".imagePickerOverlayContainer .path span", function (e) {
+                    var el = $(this);
+                    el.nextAll("span").remove();
+                    var id = el.attr("data-id");
+                    showFolderContent(id, undefined);
+                });
+                overlayEl.off("click.searchButton").on("click.searchButton", ".imagePickerOverlayContainer .searchContainer button", function (e) {
+                    var input = overlayEl.find(".searchContainer input");
+                    var searchTerm = input.val();
+                    getSearch(searchTerm, function (res) {
+                        var cont = overlayEl;
+                        var itemContainer = overlayEl.find(".itemContainer");
+                        itemContainer.html("");
+                        //console.log(res);
+                        var pathEl = $("<span class='searchTerm'/>").html("search:\"" + searchTerm + "\" ");
+                        var clear = $("<button class='btn btn-link'>clear</button>").click(function () {
+                            cont.find(".path").html("");
+                            showFolderContent(_startId, "/");
+                        }).appendTo(pathEl);
+                        cont.find(".path").html(pathEl);
+                        if (res.length == 0) {
+                            itemContainer.html($("<div class='col-12 zeroResults'/>").html("0 results"));
+                        } else {
+                            for (var i = 0; i < res.length; i++) {
+                                draw(res[i], [], itemContainer);
+                            }
+                        }
+                    }, "ImageVM", "");
+                });
+                overlayEl.on("click", "img", function (e) {
+                    var el = $(this).parents(".item");
+                    if (selected_container.find("[data-id='" + el.attr("data-id") + "'][data-variant='" + el.attr("data-variant") + "']").length == 0) {
+                        if (selected_container.find(".item").length < maxPick) {
+                            el.addClass("selected");
+                            var copy = el.clone().removeClass("col-4").addClass("col-md-4 col-lg-3");
+                            copy.find("img").css({ width: "auto" });
+                            selected_container.append(copy);
+                            setValue();
+                            //reinitialize sortable since refresh doesn't seem to work
+                            if (selected_container.hasClass("ui-sortable") && selected_container.data("uiSortable")) {
+                                selected_container.sortable("destroy");
+                                selected_container.data("uiSortable","");
+                                selected_container.sortable({ handle: "i.imagePickerSortHandle", stop: function (event, ui) { setValue(); } });
+                            }
+                        } else msg(undefined, "you cannot select any more, max selection is set to " + maxPick, undefined, undefined);
+
+                    } else {
+                        selected_container.find("[data-id='" + el.attr("data-id") + "'][data-variant='" + el.attr("data-variant") + "']").remove();
+                        el.removeClass("selected");
+                        setValue();
+                    }
+                });
+            });
+            var showFolderContent = function (id, name, f) {
+                var cont = overlayEl;
+                var itemContainer = overlayEl.find(".itemContainer");
+                if (cont.length == 0) return;
+                itemContainer.html("");
+                if (name != undefined) {
+                    var pathEl = $("<span data-id='" + id + "'/>").html(name + (name == "/" ? "" : "/"));
+                    cont.find(".path").append(pathEl);
+                }
+                getMinimumContentByParentId(id, function (res) {
+                    //console.log(res);
+                    for (guid in res.published) {
+                        var itemGroup = res.published[guid];
+                        var vCount = 0;
+                        for (variant in itemGroup) {
+                            var item = itemGroup[variant];
+                            if (vCount > 0 && item.Type != "ImageVM")
+                                break;
+                            draw(item, res.children, itemContainer);
+                            vCount++;
+                        }
+                    }
+                    var items = itemContainer.find(".item");
+                    items.sort(function (a, b) {
+                        return parseInt($(a).attr("data-sortorder")) - parseInt($(b).attr("data-sortorder"));
+                    });
+                    itemContainer.append(items);
+                    if (f) f();
+                }, true,true);
+            }
+
+            var draw = function (model, children, itemContainer) {
+                //if (!children.includes(model.Id) && model.Type != 'ImageVM')
+                //    return;
+                var el = container.find(".interfaces .item").clone();
+                if (selected_container.find("[data-id='" + model.Id + "'][data-variant='" + model.Variant + "']").length > 0) {
+                    el.addClass("selected");
+                }
+                el.attr({ "data-id": model.Id, "data-variant": model.Variant, "data-nodename": model.NodeName,"data-sortorder":model.SortOrder });
+                el.find(".variant").html(model.Variant);
+                el.find(".nodename").html(model.NodeName);
+                if (model.Type == "ImageVM") {
+                    el.find(".iconContainer").hide();
+                    el.find("img").attr({ src: model.Image.Path }).css({ width: "100%" });
+                } else {
+                    el.find(".imageContainer").hide();
+                    el.find(".variant").hide();
+                    el.find(".separator").hide();
+                }
+                if (children.includes(model.Id)) {
+                    el.find(".metaContainer").addClass("folder");
+                    el.find(".iconContainer i").removeClass("fa-file-alt").addClass("fa-folder");
+                }
+
+                itemContainer.append(el);
+                //console.log(model);
+            }
+            selected_container.off("click.remove").on("click.remove", "i.remove", function (e) {
+                var item = $(this).parents(".item");
+                if (overlayEl)
+                    overlayEl.find(".item[data-id='" + item.attr("data-id") + "'][data-variant='" + item.attr("data-variant") + "']")
+                        .removeClass("selected");
+                item.remove();
+                setValue();
+            });
+
+            selected_container.off("click.view").on("click.view", ".view", function (e) {
+                var el = $(this);
+                var selectedNode = el.parents(".item");
+                var id = selectedNode.attr("data-id");
+                var variant = selectedNode.attr("data-variant");
+                var nodename = selectedNode.attr("data-nodename");
+
+                var container = $("<div />");
+                var inner = $("<div data-tabPrefix='overlayContent_' class='cont_inner'></div>").css({ width: "100%", height: "100%" });
+                var msgContainer = $("<div class='msgTop'></div>");
+                container.append(msgContainer).append(inner);
+
+                overlay(container, "90%", undefined, top, nodename);
+                displayMarkup(null, undefined, variant, undefined, id, inner, undefined);
+            });
+        }
+
+        init(container);
+
+    });
+</script>
+<style>
+    .puckimagepicker .interfaces {
+        display: none;
+    }
+
+    .puckimagepicker img {
+        max-width: 100%;
+    }
+
+    .imagePickerOverlayContainer .variant, .puckimagepicker .variant {
+        color: #1e1e1e !important;
+    }
+
+    .imagePickerOverlayContainer .iconContainer {
+        text-align: center;
+    }
+
+    .imagePickerOverlayContainer .iconContainer i {
+        font-size: 3em;
+        width: 100%;
+        padding: 12px;
+    }
+
+    .imagePickerOverlayContainer .item {
+        background: #f8f8f8;
+        border: 1px solid #fff;
+    }
+
+    .imagePickerOverlayContainer .path span {
+        margin: 0 5px;
+        padding: 5px;
+        background: #f2f2f2;
+        cursor: pointer;
+    }
+
+    .imagePickerOverlayContainer .item.selected .metaContainer {
+        background: #ccffcc;
+    }
+
+    .imagePickerOverlayContainer .metaContainer.folder {
+        cursor: pointer;
+        border: 1px dashed #121212;
+        padding: 3px;
+        text-align: center;
+    }
+
+        .imagePickerOverlayContainer .metaContainer.folder span.nodename {
+            cursor: pointer !important;
+        }
+
+    .imagePickerOverlayContainer .searchContainer button {
+        vertical-align: top;
+    }
+
+    .imagePickerOverlayContainer .searchContainer input {
+        height: 38px;
+        width: 215px;
+    }
+
+    .imagePickerOverlayContainer img {
+        cursor: pointer;
+    }
+
+    @@media only screen and (max-width:768px) {
+        .puckimagepicker img {
+            max-height: 150px;
+        }
+    }
+
+    .imagePickerOverlayContainer .actionContainer {
+        display: none;
+    }
+
+    .puckimagepicker .actionContainer {
+        display: block;
+        padding-top: 4px;
+        border-top: 1px solid #f2f2f2;
+    }
+
+    .puckimagepicker .actionContainer i {
+        cursor: pointer;
+        margin:0px 3px;
+    }
+
+    .puckimagepicker .actionContainer i.imagePickerSortHandle {
+        float:right;
+    }
+
+    .puckimagepicker .item {
+    }
+</style>
